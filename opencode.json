@@ -1,1 +1,19 @@
-{"$schema": "https://opencode.ai/config.json", "references": {"context": {"path": "./context", "description": "Contexto de desarrollo del proyecto YABE: workflow de features, descriptor actual, especificación de descriptor y convenciones de código."}, "openapi": {"path": "./openapi", "description": "Especificaciones OpenAPI del YABE API (openapi-1.yaml, openapi-2.yaml)."}}}
+{
+  "$schema": "https://opencode.ai/config.json",
+  "references": {
+    "context": {
+      "path": "./context",
+      "description": "Contexto de desarrollo del proyecto YABE: workflow de features, descriptor actual, especificación de descriptor y convenciones de código."
+    },
+    "openapi": {
+      "path": "./openapi",
+      "description": "Especificaciones OpenAPI del YABE API (openapi-1.yaml, openapi-2.yaml)."
+    }
+
+  },
+  "permission": {
+    "tools": {
+        "skill": "allow"
+    }
+  }
+}
