@@ -11,8 +11,21 @@ class Hotel extends Model
 
     protected $guarded = [];
 
+    protected $hidden = ['id'];
+
     public function roomTypes(): HasMany
     {
         return $this->hasMany(HotelRoomType::class);
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'code' => $this->code,
+            'roomTypes' => $this->relationLoaded('roomTypes')
+                ? $this->getRelation('roomTypes')->values()->toArray()
+                : [],
+        ];
     }
 }

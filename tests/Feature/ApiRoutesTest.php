@@ -13,7 +13,33 @@ class ApiRoutesTest extends TestCase
         $response->assertOk()
             ->assertJsonCount(2)
             ->assertJsonPath('0.code', 'GRAND')
-            ->assertJsonPath('0.room_types.0.room_type.code', 'STANDARD');
+            ->assertJsonPath('0.roomTypes.0.roomType.code', 'STANDARD')
+            ->assertJsonPath('0.roomTypes.0.quantity', 20)
+            ->assertJsonPath('0.roomTypes.0.price', 95.0);
+    }
+
+    public function test_get_hotels_structure_matches_openapi(): void
+    {
+        $response = $this->getJson('/api/v1/hotels');
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                '*' => [
+                    'name',
+                    'code',
+                    'roomTypes' => [
+                        '*' => [
+                            'roomType' => [
+                                'name',
+                                'code',
+                                'maxOccupancy',
+                            ],
+                            'quantity',
+                            'price',
+                        ],
+                    ],
+                ],
+            ]);
     }
 
     public function test_get_room_types_returns_ok(): void
@@ -24,6 +50,20 @@ class ApiRoutesTest extends TestCase
             ->assertJsonCount(3)
             ->assertJsonPath('0.code', 'STANDARD')
             ->assertJsonPath('1.maxOccupancy', 3);
+    }
+
+    public function test_get_room_types_structure_matches_openapi(): void
+    {
+        $response = $this->getJson('/api/v1/room-types');
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                '*' => [
+                    'name',
+                    'code',
+                    'maxOccupancy',
+                ],
+            ]);
     }
 
     public function test_post_availability_returns_ok(): void

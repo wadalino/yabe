@@ -11,6 +11,8 @@ class HotelRoomType extends Model
 
     protected $guarded = [];
 
+    protected $hidden = ['id', 'hotel_code', 'room_type_code', 'hotel'];
+
     protected function casts(): array
     {
         return [
@@ -27,5 +29,16 @@ class HotelRoomType extends Model
     public function roomType(): BelongsTo
     {
         return $this->belongsTo(RoomType::class);
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'roomType' => $this->relationLoaded('roomType')
+                ? $this->getRelation('roomType')->toArray()
+                : null,
+            'quantity' => $this->quantity,
+            'price' => $this->price,
+        ];
     }
 }
