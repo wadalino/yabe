@@ -1,0 +1,76 @@
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: yabe
+  IMAGE_TAG: latest
+  IMAGE_ARCHIVE: yabe-image.tar.gz
+  DEPLOY_COMPOSE_FILE: compose.deploy.yaml
+  DEPLOY_DIR: ~/yabe
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+
+      - name: Export image to archive
+        run: docker save "${IMAGE_NAME}:${IMAGE_TAG}" | gzip > "${IMAGE_ARCHIVE}"
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yabe-deploy
+          path: |
+            ${{ env.IMAGE_ARCHIVE }}
+            ${{ env.DEPLOY_COMPOSE_FILE }}
+
+  deploy:
+    name: Deploy to VPS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: yabe-deploy
+
+      - name: Set up SSH access
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${VPS_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Transfer image and Compose file to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          export SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes"
+          # shellcheck disable=SC2086
+          ssh $SSH_OPTS "${VPS_USER}@${VPS_HOST}" "mkdir -p ${DEPLOY_DIR}"
+          # shellcheck disable=SC2086
+          scp $SSH_OPTS "${IMAGE_ARCHIVE}" "${DEPLOY_COMPOSE_FILE}" "${VPS_USER}@${VPS_HOST}:${DEPLOY_DIR}/"
+
+      - name: Load image and update application on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2086
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "${VPS_USER}@${VPS_HOST}" \
+            "cd ${DEPLOY_DIR} && docker load -i ${IMAGE_ARCHIVE} && docker compose -f ${DEPLOY_COMPOSE_FILE} up -d && docker compose -f ${DEPLOY_COMPOSE_FILE} ps"
